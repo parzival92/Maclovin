@@ -4,10 +4,7 @@ import MaclovinCore
 struct HistoryCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "history",
-        abstract: "Show local scan and cleanup history summaries.",
-        subcommands: [
-            HistoryShowCommand.self
-        ]
+        abstract: "Show local scan and cleanup history summaries."
     )
 
     func run() throws {
