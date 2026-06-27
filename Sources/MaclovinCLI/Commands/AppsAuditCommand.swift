@@ -7,54 +7,68 @@ struct AppsAuditCommand: ParsableCommand {
         abstract: "Explain application bundles and related application data."
     )
 
-    @Option(name: .long, help: "Number of largest bundles to list.")
+    @Option(name: .long, help: "Number of largest apps to list.")
     var top: Int = 15
 
     func run() throws {
-        let result = AppScanner.scan()
+        let report = AppsAuditor.audit()
 
         var sections: [ReportSection] = [
             ReportSection(
                 title: "Summary",
                 rows: [
-                    ReportRow("App bundles", "\(result.entries.count)"),
-                    ReportRow("Total bundle size", result.totalSize.formatted),
-                    ReportRow("Scanned", result.scannedDirectories.isEmpty ? "none" : result.scannedDirectories.joined(separator: ", ")),
+                    ReportRow("Apps", "\(report.footprints.count)"),
+                    ReportRow("Total (apps + data)", ByteSize(report.totalBytes).formatted),
+                    ReportRow("Attributed to apps", ByteSize(report.attributedBytes).formatted),
+                    ReportRow("Unattributed data", ByteSize(report.unattributedBytes).formatted),
+                    ReportRow("Scanned", report.scannedDirectories.isEmpty ? "none" : report.scannedDirectories.joined(separator: ", ")),
                     ReportRow("Writes", "none")
                 ]
             )
         ]
 
-        if result.entries.isEmpty {
-            sections.append(
-                ReportSection(
-                    title: "Largest Bundles",
-                    rows: [ReportRow("(none found)", "")]
-                )
-            )
+        if report.footprints.isEmpty {
+            sections.append(ReportSection(title: "Largest Apps", rows: [ReportRow("(none found)", "")]))
         } else {
-            let listed = result.entries.prefix(max(0, top))
-            let rows = listed.map { entry in
-                ReportRow(
-                    entry.name,
-                    "\(entry.size.formatted) [\(entry.confidence.label)]\(entry.isComplete ? "" : " (partial)")"
-                )
+            let rows = report.footprints.prefix(max(0, top)).map { footprint -> ReportRow in
+                let value: String
+                if footprint.dataBytes > 0 {
+                    let confidence = footprint.dataConfidence.map { " [\($0.label)]" } ?? ""
+                    value = "\(footprint.totalSize.formatted)  (bundle \(footprint.bundleSize.formatted) + data \(footprint.dataSize.formatted)\(confidence))"
+                } else {
+                    value = "\(footprint.totalSize.formatted)  (bundle only)"
+                }
+                return ReportRow(footprint.name, value)
             }
-            sections.append(ReportSection(title: "Largest Bundles", rows: rows))
+            sections.append(ReportSection(title: "Largest Apps", rows: rows))
         }
 
-        if !result.skippedDirectories.isEmpty {
+        if !report.unattributed.isEmpty {
+            var rows = report.unattributed.map { bucket in
+                ReportRow(bucket.source.rawValue, bucket.size.formatted)
+            }
+            let largestItems = report.unattributed
+                .flatMap(\.largest)
+                .sorted { $0.size > $1.size }
+                .prefix(5)
+            for item in largestItems {
+                rows.append(ReportRow("• \(item.folderName)", "\(item.size.formatted) (\(item.source.rawValue))"))
+            }
+            sections.append(ReportSection(title: "Unattributed Data", rows: rows))
+        }
+
+        if !report.skippedDirectories.isEmpty {
             sections.append(
                 ReportSection(
                     title: "Skipped",
-                    rows: result.skippedDirectories.map { ReportRow($0, "absent or unreadable") }
+                    rows: report.skippedDirectories.map { ReportRow($0, "absent or unreadable") }
                 )
             )
         }
 
         let footer = [
             "Sizes are on-disk allocated bytes. Hardlinks counted once; symlinks not followed.",
-            "Bundle sizes only; related app support/container and developer-tool data are not yet attributed.",
+            "Data is matched to apps by bundle ID (high) or name (medium); unmatched data is listed separately.",
             "These numbers are Maclovin's own measurement and do not reproduce macOS Storage Settings."
         ]
 

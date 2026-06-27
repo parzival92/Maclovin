@@ -35,4 +35,22 @@ enum Fixture {
     static func join(_ base: String, _ component: String) -> String {
         base + "/" + component
     }
+
+    static func url(_ path: String) -> URL {
+        URL(fileURLWithPath: path, isDirectory: true)
+    }
+
+    static func writePlist(_ path: String, bundleID: String) {
+        let plist = """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+        <plist version="1.0">
+        <dict>
+            <key>CFBundleIdentifier</key>
+            <string>\(bundleID)</string>
+        </dict>
+        </plist>
+        """
+        FileManager.default.createFile(atPath: path, contents: Data(plist.utf8))
+    }
 }
