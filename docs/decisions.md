@@ -87,6 +87,13 @@ Decided default (see issue #2):
 ## Uninstall
 
 - V1 includes uninstall with approval.
+- App name resolution for `apps uninstall <app-name>` (see issue #3):
+  - Resolve against display name (`.app` filename without extension) and bundle identifier.
+  - Case-insensitive; the trailing `.app` suffix is optional (`slack` → `Slack.app`).
+  - Bundle-identifier matches take precedence over display-name matches.
+  - "Ambiguous" means more than one distinct bundle matches across `/Applications` and `~/Applications`; abort and list all candidates (name, path, bundle ID) instead of guessing.
+  - No match aborts with a not-found message; the dry-run echoes the resolved name, path, and bundle ID before any confirmation.
+  - Implemented in `MaclovinCore/AppResolver.swift`.
 - App uninstall is two-stage:
   1. Move the `.app` bundle to Trash.
   2. Separately review related support data before cleanup.

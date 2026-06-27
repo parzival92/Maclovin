@@ -7,13 +7,15 @@ struct AppsUninstallCommand: ParsableCommand {
         abstract: "Dry-run or apply an app uninstall after explicit review."
     )
 
-    @Argument(help: "The app name to inspect.")
+    @Argument(help: "The app to uninstall: display name, .app filename, or bundle identifier (case-insensitive).")
     var appName: String
 
     @Flag(exclusivity: .exclusive, help: "Choose dry-run review or apply mode.")
     var mode: ExecutionMode = .dryRun
 
     func run() throws {
+        let app = try resolveTarget()
+
         if mode == .apply {
             throw ValidationError("App uninstall apply is not implemented in this scaffold. No files were changed.")
         }
@@ -25,7 +27,10 @@ struct AppsUninstallCommand: ParsableCommand {
                     ReportSection(
                         title: "Target",
                         rows: [
-                            ReportRow("App", appName),
+                            ReportRow("Query", appName),
+                            ReportRow("Resolved app", app.name),
+                            ReportRow("Bundle", app.path),
+                            ReportRow("Bundle ID", app.bundleID ?? "unknown"),
                             ReportRow("Mode", mode.label),
                             ReportRow("Writes", "none")
                         ]
@@ -35,11 +40,32 @@ struct AppsUninstallCommand: ParsableCommand {
                         rows: [
                             ReportRow("Bundle", "move .app to Trash"),
                             ReportRow("Related data", "separate cleanup review"),
-                            ReportRow("Confirmation", "type the resolved app name to confirm before apply")
+                            ReportRow("Confirmation", "type '\(app.name)' to confirm before apply")
                         ]
                     )
                 ]
             )
         )
+    }
+
+    /// Resolves `appName` to a single installed bundle, surfacing not-found and
+    /// ambiguous outcomes as validation errors before any further work.
+    private func resolveTarget() throws -> InstalledApp {
+        switch AppResolver.resolve(appName) {
+        case .resolved(let app):
+            return app
+        case .notFound(let query):
+            throw ValidationError(
+                "No installed app matches '\(query)'. Try the display name, .app filename, or bundle identifier."
+            )
+        case .ambiguous(let query, let candidates):
+            let list = candidates
+                .map { "  - \($0.name)  (\($0.path))  [\($0.bundleID ?? "no bundle id")]" }
+                .joined(separator: "\n")
+            throw ValidationError(
+                "'\(query)' is ambiguous; it matches \(candidates.count) apps:\n\(list)\n"
+                    + "Re-run with the bundle identifier to pick exactly one."
+            )
+        }
     }
 }

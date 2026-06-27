@@ -205,14 +205,15 @@ maclovin brew uninstall <formula-or-cask> --apply
 Rules:
 
 - Apps move to Trash.
+- `<app-name>` resolves by display name or bundle identifier, case-insensitively, with the `.app` suffix optional (see PRD "Uninstall" and `AppResolver`).
 - Related support data is separate from app bundle uninstall.
 - Homebrew uninstall delegates to `brew uninstall`.
 - Exact typed confirmation is required.
 
 Validation:
 
-- App dry-run shows the exact target.
-- Apply refuses ambiguous app names.
+- App dry-run echoes the resolved target (name, path, bundle ID).
+- A name matching more than one bundle aborts and lists the candidates; a name matching none aborts with a not-found message.
 - Homebrew dry-run shows dependents or risk where available.
 
 ## Milestone 8: History And Config

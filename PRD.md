@@ -100,10 +100,19 @@ Cleanup may run `brew cleanup` only after dry-run output and confirmation. Upgra
 
 App uninstall is separate from cleanup and uses a stricter confirmation model.
 
-For apps:
+For apps, `maclovin apps uninstall <app-name>` first resolves `<app-name>` to a single installed bundle:
 
-1. Dry-run shows the app bundle, related support data candidates, confidence, and risk.
-2. Apply moves the `.app` bundle to Trash after exact typed confirmation.
+- The query matches against an app's **display name** (the `.app` filename without its extension) or its **bundle identifier** (`CFBundleIdentifier`).
+- Matching is **case-insensitive** — `slack` resolves `Slack.app`.
+- The trailing **`.app` suffix is optional** — `Slack`, `slack`, and `Slack.app` all resolve the same bundle. (Bundle identifiers never carry a `.app` suffix.)
+- A **bundle-identifier** match takes precedence over a display-name match, so typing a specific identifier always targets that exact app.
+- A query is **ambiguous** when it matches more than one distinct bundle across `/Applications` and `~/Applications` (for example a `Slack.app` present in both). Maclovin aborts and lists every candidate with its path and bundle identifier, asking the user to re-run with the bundle identifier to pick one.
+- A query that matches nothing aborts with a not-found message naming what was searched.
+
+Once resolved:
+
+1. Dry-run echoes the **resolved target** — display name, bundle path, and bundle identifier — alongside related support data candidates, confidence, and risk, so the user can verify the right app before confirming.
+2. Apply moves the `.app` bundle to Trash after exact typed confirmation of the **resolved display name**.
 3. Related app data cleanup is a separate review step and should move uncertain data to Trash.
 
 For Homebrew packages:
