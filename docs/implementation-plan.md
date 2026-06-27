@@ -221,7 +221,6 @@ Validation:
 Implement:
 
 - `maclovin history`
-- `maclovin history show latest`
 - `~/.config/maclovin/config.toml`
 
 History stores summaries and action logs, not full private inventories.
