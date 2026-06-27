@@ -96,6 +96,19 @@ Cleanup may run `brew cleanup` only after dry-run output and confirmation. Upgra
 
 `maclovin cleanup apply` executes only selected or explicit candidates and records the result in local history.
 
+#### Estimate vs Actual-Freed Reconciliation
+
+Every cleanup candidate states where its estimate came from and how much space was actually freed, on the same basis. Two cleanup modes set that basis:
+
+- **Official-command mode** (for example `brew cleanup`, `npm cache clean`, `pip cache purge`, `pnpm store prune`): the estimate is parsed from the tool's own dry-run output, since Maclovin does not choose which bytes the tool removes. Freed space is the before/after on-disk delta of the tool's managed store (for example the Homebrew cache).
+- **Direct-delete mode** (for example Xcode DerivedData, generated log folders): the estimate is the on-disk size measured by walking the target tree immediately before applying, so it reflects current contents rather than a stale scan. Freed space is measured per candidate by re-measuring the tree after removal (`measured-before − measured-after`).
+
+Reconciliation is reported per candidate where feasible. When several official-command candidates share one managed store, reconciliation may only be available at store granularity; Maclovin states that rather than inventing per-candidate numbers.
+
+A partial failure mid-batch stops the batch and is reported honestly: candidates that already succeeded keep their measured freed bytes, the failing candidate is recorded as failed with a reason, and the remaining candidates are recorded as skipped. The total freed so far is always shown.
+
+The per-candidate estimated-vs-freed result surfaces both after `cleanup apply` and in `maclovin history`.
+
 ### Uninstall
 
 App uninstall is separate from cleanup and uses a stricter confirmation model.
@@ -192,9 +205,9 @@ Local history should include:
 - disk usage summary
 - top storage contributors
 - cleanup candidates found
-- cleanup actions applied
-- estimated bytes before
-- measured bytes after when available
+- cleanup actions applied, with per-candidate status (succeeded, failed, skipped)
+- per-candidate estimated bytes before
+- per-candidate measured bytes freed after, where feasible
 - errors and skipped paths
 
 ## Configuration

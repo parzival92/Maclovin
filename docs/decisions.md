@@ -83,6 +83,14 @@ Decided default (see issue #2):
 - Cleanup recommendations are ranked by size, safety, confidence, and reversibility.
 - Official cleanup commands are preferred over direct deletion.
 - Direct deletion is reserved for well-known generated/cache paths.
+- Estimate vs actual-freed reconciliation (see issue #5):
+  - Two cleanup modes set how the estimate is produced and how freed bytes are measured, so both sides reconcile on the same basis:
+    - Official-command mode: the estimate is parsed from the tool's own dry-run (e.g. `brew cleanup --dry-run`); freed bytes are the before/after on-disk delta of the tool's managed store, because the tool decides what it removes.
+    - Direct-delete mode: the estimate is the on-disk size from walking the target tree immediately before applying (current contents, not a stale scan); freed bytes are per-candidate, measured by re-measuring the tree after removal (`before − after`).
+  - Reconciliation is per candidate where feasible. Official-command candidates that share a managed store may only reconcile at store granularity; that is stated rather than faked.
+  - A partial failure stops the batch: candidates that already succeeded keep their measured freed bytes, the failing candidate is recorded as failed with a reason, and the remainder are recorded as skipped. The total freed-so-far is always reported.
+  - The reconciliation surfaces both after `cleanup apply` and in `history`; history stores the same per-candidate estimated-vs-freed record (`estimated bytes before` / `measured bytes after`).
+  - Modeled in `MaclovinCore/CleanupReconciliation.swift` so `cleanup apply` and `history show` render it from one shared contract.
 
 ## Uninstall
 
