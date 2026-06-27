@@ -53,6 +53,16 @@ Deferred commands:
 
 Xcode and Docker findings are folded into `apps audit` and cleanup recommendations.
 
+## Sizing Methodology
+
+Decided default (see issue #2):
+
+- Report **on-disk allocated bytes** (`st_blocks * 512`), matching `du`, not logical file length.
+- Count **hardlinks** once per inode; do not follow **symlinks**.
+- Tally unreadable paths and mark a measurement partial instead of failing.
+- Accept that APFS **clones** may over-count; **snapshots** and **purgeable** space are not counted, and this is stated to the user.
+- Implemented in `MaclovinCore/DirectorySizer.swift`; verified against `du` on real bundles.
+
 ## Applications Audit
 
 - `apps audit` reports app bundles plus related app data.

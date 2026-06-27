@@ -139,6 +139,20 @@ For Homebrew packages:
 - project-level dependency directories such as `node_modules`
 - virtual environments
 
+## Sizing Methodology
+
+Maclovin reports its own measurement and does not try to reproduce macOS Storage Settings numbers.
+
+- Sizes are **on-disk allocated bytes** (sum of `st_blocks * 512`), i.e. what is actually reclaimed when a path is removed — not logical file length. This matches `du` and naturally accounts for sparse files and filesystem compression.
+- **Hardlinks** are counted once per inode within a single measurement.
+- **Symlinks** are not followed and not traversed into.
+- Paths that cannot be read are tallied and surfaced (a measurement can be marked partial) rather than aborting the scan.
+
+Known limits, stated plainly to the user:
+
+- APFS **clones** may over-count, because each clone reports its full allocated blocks even when blocks are shared.
+- APFS **snapshots** and **purgeable** space are not counted.
+
 ## Safety Model
 
 - Default commands are read-only unless the command name clearly indicates apply or uninstall.
