@@ -1,16 +1,16 @@
 import MaclovinCore
-import XCTest
+import Testing
 
-final class SafetyLabelTests: XCTestCase {
-    func testRiskLabelsAreHumanReadable() {
-        XCTAssertEqual(Risk.low.label, "Low")
-        XCTAssertEqual(Risk.medium.label, "Medium")
-        XCTAssertEqual(Risk.high.label, "High")
-    }
+@Test
+func riskLabelsAreHumanReadable() {
+    #expect(Risk.low.label == "Low")
+    #expect(Risk.medium.label == "Medium")
+    #expect(Risk.high.label == "High")
+}
 
-    func testConfidenceLabelsAreHumanReadable() {
-        XCTAssertEqual(Confidence.high.label, "High")
-        XCTAssertEqual(Confidence.medium.label, "Medium")
-        XCTAssertEqual(Confidence.low.label, "Low")
-    }
+@Test
+func confidenceLabelsAreHumanReadable() {
+    #expect(Confidence.high.label == "High")
+    #expect(Confidence.medium.label == "Medium")
+    #expect(Confidence.low.label == "Low")
 }

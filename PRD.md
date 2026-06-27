@@ -152,6 +152,21 @@ For Homebrew packages:
 - Every cleanup recommendation includes size, risk, confidence, and why it is considered safe or risky.
 - Cleanup and uninstall actions are written to local history.
 
+### Confirmation Gate
+
+Every destructive action (cleanup apply, app uninstall, Homebrew uninstall) is gated by an explicit confirmation prompt. The default gate is **typed confirmation**:
+
+- For app and Homebrew uninstall, the user types the **resolved target name** exactly — the app name (for example `Slack`) or the formula/cask name shown in the dry-run. Typing the target name guards against acting on the wrong thing, not just against a stray keystroke.
+- For a `cleanup apply` batch there is no single target, so the user types the literal word `apply` after reviewing the grouped summary. Selection of which candidates to clean happens earlier in `cleanup review`; `apply` confirms the batch once.
+
+Matching rules:
+
+- Input is trimmed of surrounding whitespace and newlines.
+- Typed-target matching is case-sensitive and must match exactly.
+- A mismatch aborts the action with no changes — Maclovin does not loop or re-prompt.
+
+When config sets `require_typed_confirmation = false`, the gate falls back to a lighter `[y/N]` prompt that defaults to "no". Maclovin never performs a destructive action with zero interaction.
+
 ## Local-Only Data
 
 Maclovin stores only local summaries and action logs by default. It should not store full private file inventories unless a future explicit debug/export mode is added.

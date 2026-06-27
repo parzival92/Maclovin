@@ -65,6 +65,11 @@ Xcode and Docker findings are folded into `apps audit` and cleanup recommendatio
 - Default diagnostic commands are read-only.
 - Cleanup uses an interactive review picker.
 - Cleanup requires explicit typed confirmation before applying changes.
+- Confirmation gate mechanics (see issue #1):
+  - Uninstall confirms by typing the resolved target name (app or formula/cask name).
+  - `cleanup apply` confirms the batch by typing the literal word `apply`.
+  - Matching is case-sensitive and whitespace-trimmed; a mismatch aborts with no re-prompt.
+  - `require_typed_confirmation = false` falls back to a `[y/N]` prompt; no destructive action ever runs with zero interaction.
 - Cleanup recommendations are ranked by size, safety, confidence, and reversibility.
 - Official cleanup commands are preferred over direct deletion.
 - Direct deletion is reserved for well-known generated/cache paths.

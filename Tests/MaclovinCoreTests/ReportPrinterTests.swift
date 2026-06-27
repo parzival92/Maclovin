@@ -1,23 +1,23 @@
 import MaclovinCore
-import XCTest
+import Testing
 
-final class ReportPrinterTests: XCTestCase {
-    func testRendersReportWithSectionsAndFooter() {
-        let output = ReportPrinter.render(
-            title: "Title",
-            sections: [
-                ReportSection(
-                    title: "Section",
-                    rows: [
-                        ReportRow("Key", "Value")
-                    ]
-                )
-            ],
-            footer: ["Footer"]
-        )
+@Test
+func reportPrinterRendersSectionsAndFooter() {
+    let output = ReportPrinter.render(
+        title: "Title",
+        sections: [
+            ReportSection(
+                title: "Section",
+                rows: [
+                    ReportRow("Key", "Value")
+                ]
+            )
+        ],
+        footer: ["Footer"]
+    )
 
-        XCTAssertEqual(
-            output,
+    #expect(
+        output ==
             """
             Title
             =====
@@ -28,6 +28,5 @@ final class ReportPrinterTests: XCTestCase {
 
             Footer
             """
-        )
-    }
+    )
 }

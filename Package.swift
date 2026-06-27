@@ -27,7 +27,24 @@ let package = Package(
         ),
         .testTarget(
             name: "MaclovinCoreTests",
-            dependencies: ["MaclovinCore"]
+            dependencies: ["MaclovinCore"],
+            swiftSettings: [
+                .unsafeFlags(
+                    ["-F", "/Library/Developer/CommandLineTools/Library/Developer/Frameworks"],
+                    .when(platforms: [.macOS])
+                )
+            ],
+            linkerSettings: [
+                .unsafeFlags(
+                    [
+                        "-F", "/Library/Developer/CommandLineTools/Library/Developer/Frameworks",
+                        "-Xlinker", "-rpath",
+                        "-Xlinker", "/Library/Developer/CommandLineTools/Library/Developer/Frameworks"
+                    ],
+                    .when(platforms: [.macOS])
+                ),
+                .linkedFramework("Testing", .when(platforms: [.macOS]))
+            ]
         )
     ]
 )

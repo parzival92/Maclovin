@@ -35,7 +35,7 @@ struct BrewUninstallCommand: ParsableCommand {
                         rows: [
                             ReportRow("Impact", "dependents and cask/formula type"),
                             ReportRow("Execution", "delegate to brew uninstall"),
-                            ReportRow("Confirmation", "exact typed confirmation before apply")
+                            ReportRow("Confirmation", "type the resolved formula or cask name to confirm before apply")
                         ]
                     )
                 ]

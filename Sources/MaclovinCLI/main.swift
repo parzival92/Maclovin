@@ -1,6 +1,5 @@
 import ArgumentParser
 
-@main
 struct Maclovin: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "maclovin",
@@ -19,3 +18,5 @@ struct Maclovin: ParsableCommand {
         ]
     )
 }
+
+Maclovin.main()

@@ -35,7 +35,7 @@ struct AppsUninstallCommand: ParsableCommand {
                         rows: [
                             ReportRow("Bundle", "move .app to Trash"),
                             ReportRow("Related data", "separate cleanup review"),
-                            ReportRow("Confirmation", "exact typed confirmation before apply")
+                            ReportRow("Confirmation", "type the resolved app name to confirm before apply")
                         ]
                     )
                 ]
