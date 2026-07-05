@@ -8,26 +8,68 @@ struct CleanupScanCommand: ParsableCommand {
     )
 
     func run() throws {
+        let result = CleanupScanner(environment: .live()).scan()
+
+        var sections: [ReportSection] = [
+            ReportSection(
+                title: "Summary",
+                rows: [
+                    ReportRow("Candidates", "\(result.candidates.count)"),
+                    ReportRow("Estimated reclaimable", "up to \(result.totalEstimatedSize.formatted)"),
+                    ReportRow("Audit-only findings", "\(result.auditOnly.count)"),
+                    ReportRow("Writes", "none")
+                ]
+            )
+        ]
+
+        if !result.candidates.isEmpty {
+            sections.append(
+                ReportSection(
+                    title: "Candidates (largest first)",
+                    rows: result.candidates.flatMap { candidate in
+                        [
+                            ReportRow(
+                                candidate.title,
+                                "est \(candidate.estimatedSize.formatted)"
+                                    + "  [\(candidate.risk.label) risk, \(candidate.confidence.label) confidence]"
+                                    + (candidate.mode == .officialCommand
+                                        ? "  via `\(candidate.action.displayed)`"
+                                        : "  deletes \(candidate.action.displayed)")
+                            ),
+                            ReportRow("  \(candidate.id)", "\(candidate.explanation) Estimate: \(candidate.estimateBasis).")
+                        ]
+                    }
+                )
+            )
+        }
+
+        if !result.auditOnly.isEmpty {
+            sections.append(
+                ReportSection(
+                    title: "Audit-Only (never offered for cleanup)",
+                    rows: result.auditOnly.map { finding in
+                        ReportRow(finding.title, "\(finding.size.formatted)  \(finding.path)  — \(finding.note)")
+                    }
+                )
+            )
+        }
+
+        if !result.excluded.isEmpty {
+            sections.append(
+                ReportSection(
+                    title: "Excluded by config",
+                    rows: result.excluded.map { ReportRow("skipped", $0) }
+                )
+            )
+        }
+
         print(
             ReportPrinter.render(
                 title: "Cleanup Scan",
-                sections: [
-                    ReportSection(
-                        title: "Status",
-                        rows: [
-                            ReportRow("Implementation", "scaffold"),
-                            ReportRow("Writes", "none"),
-                            ReportRow("Candidate model", "\(Risk.low.label) risk / \(Confidence.high.label) confidence labels ready")
-                        ]
-                    ),
-                    ReportSection(
-                        title: "Planned Sources",
-                        rows: [
-                            ReportRow("Official tools", "Homebrew, npm, yarn, pnpm, pip, Cargo"),
-                            ReportRow("Generated data", "Xcode DerivedData, unavailable simulators, logs, temp folders"),
-                            ReportRow("Audit-only", "Docker, version managers, project dependencies")
-                        ]
-                    )
+                sections: sections,
+                footer: [
+                    "Nothing was changed. Select and apply candidates with: maclovin cleanup review",
+                    "Estimates are on-disk allocated bytes; official commands decide what they actually remove, so some stores may free less than estimated."
                 ]
             )
         )

@@ -7,38 +7,49 @@ struct CleanupApplyCommand: ParsableCommand {
         abstract: "Apply selected cleanup candidates after explicit confirmation."
     )
 
+    @Argument(help: "Candidate IDs from 'maclovin cleanup scan' (for example npm-cache brew-cleanup).")
+    var candidateIDs: [String]
+
+    func validate() throws {
+        guard !candidateIDs.isEmpty else {
+            throw ValidationError("Name at least one candidate ID; list them with 'maclovin cleanup scan'.")
+        }
+    }
+
     func run() throws {
-        // Execution is not wired up in this scaffold, so no files are changed.
-        // What is defined here is the estimate-vs-actual reconciliation contract
-        // (see issue #5) that apply and history both report against.
-        print(
-            ReportPrinter.render(
-                title: "Cleanup Apply",
-                sections: [
-                    ReportSection(
-                        title: "Status",
-                        rows: [
-                            ReportRow("Implementation", "scaffold"),
-                            ReportRow("Writes", "none"),
-                            ReportRow("Confirmation", "typed 'apply' batch gate required before execution")
-                        ]
-                    ),
-                    ReportSection(
-                        title: "Estimate / Measurement Contract",
-                        rows: [
-                            ReportRow(CleanupMode.officialCommand.label + " estimate", CleanupMode.officialCommand.estimateMethod),
-                            ReportRow(CleanupMode.officialCommand.label + " freed", CleanupMode.officialCommand.measurementMethod),
-                            ReportRow(CleanupMode.directDelete.label + " estimate", CleanupMode.directDelete.estimateMethod),
-                            ReportRow(CleanupMode.directDelete.label + " freed", CleanupMode.directDelete.measurementMethod)
-                        ]
-                    )
-                ],
-                footer: [
-                    "On apply, each candidate reports estimated vs actual bytes freed.",
-                    "Partial failures stop the batch: succeeded candidates keep their freed bytes,",
-                    "remaining candidates are recorded as skipped, and history stores the same reconciliation."
-                ]
+        let config = ConfigFile.load()
+        // Re-scan so estimates reflect current contents, not a stale listing.
+        let scan = CleanupScanner(environment: .live(config: config)).scan()
+        let candidates = try resolve(candidateIDs, from: scan)
+
+        try CleanupApplyFlow.confirmAndExecute(candidates, config: config)
+    }
+
+    /// Maps requested IDs to scanned candidates, preserving the user's order
+    /// and dropping duplicates. Unknown IDs abort before anything is shown.
+    private func resolve(_ ids: [String], from scan: CleanupScanResult) throws -> [CleanupCandidate] {
+        let byID = Dictionary(scan.candidates.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+
+        var selected: [CleanupCandidate] = []
+        var unknown: [String] = []
+        var seen: Set<String> = []
+        for id in ids where seen.insert(id).inserted {
+            if let candidate = byID[id] {
+                selected.append(candidate)
+            } else {
+                unknown.append(id)
+            }
+        }
+
+        guard unknown.isEmpty else {
+            let available = scan.candidates.map(\.id).joined(separator: ", ")
+            throw ValidationError(
+                "No current candidate with ID \(unknown.joined(separator: ", ")). "
+                    + (available.isEmpty
+                        ? "The scan found no candidates right now."
+                        : "Current candidates: \(available).")
             )
-        )
+        }
+        return selected
     }
 }
