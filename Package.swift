@@ -25,12 +25,24 @@ let package = Package(
                 .product(name: "ArgumentParser", package: "swift-argument-parser")
             ]
         ),
-        .testTarget(
-            name: "MaclovinCoreTests",
+        // An executable runner (`swift run maclovin-tests`) instead of a
+        // testTarget: on a Command Line Tools-only machine `swift test`
+        // builds the bundle but silently never executes it (no xctest host),
+        // so the suite runs through swift-testing's SwiftPM entry point in a
+        // plain executable.
+        .executableTarget(
+            name: "maclovin-tests",
             dependencies: ["MaclovinCore"],
+            path: "Tests/MaclovinCoreTests",
             swiftSettings: [
                 .unsafeFlags(
-                    ["-F", "/Library/Developer/CommandLineTools/Library/Developer/Frameworks"],
+                    [
+                        "-F", "/Library/Developer/CommandLineTools/Library/Developer/Frameworks",
+                        // The CLT ships _Testing_Foundation as a binary-only
+                        // framework (no swiftmodule), so the Foundation+Testing
+                        // cross-import overlay cannot be loaded.
+                        "-Xfrontend", "-disable-cross-import-overlays"
+                    ],
                     .when(platforms: [.macOS])
                 )
             ],
