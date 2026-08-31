@@ -1,8 +1,8 @@
 # Maclovin
 
-**A local-first macOS CLI that explains where your disk space went — and reclaims it only with your explicit approval.**
+**A local-first macOS CLI that explains where your disk space and memory went — and reclaims only with your explicit approval.**
 
-Maclovin is built for developers, designers, and power users who want to understand high disk usage without trusting a black-box cleaner. It measures storage itself, explains every number, states where every estimate comes from, and never deletes anything without a typed confirmation.
+Maclovin is built for developers, designers, and power users who want to understand a full disk or a thrashing machine without trusting a black-box cleaner. It measures the system itself, explains every number, states where every estimate comes from, and never deletes anything without a typed confirmation.
 
 ```
 $ maclovin cleanup scan
@@ -47,6 +47,33 @@ ln -s "$PWD/.build/release/maclovin" ~/.local/bin/maclovin   # or any directory 
 A Homebrew tap is planned for the first tagged release.
 
 ## Usage
+
+### Explain memory pressure
+
+```bash
+maclovin memory audit
+```
+
+Read-only, always. Releasing memory means stopping a process, so Maclovin names the command that would do it and leaves running it to you.
+
+```
+Pressure Signals
+----------------
+Swap: 4.7 GB of 6.0 GB (79%)  [Critical]
+Compressor: 21 GB held in 6.7 GB (3.2x)  [Elevated]
+Headroom: 149 MB free of 16 GB (1%)  [Elevated]
+
+Virtualization Runtimes
+-----------------------
+Docker Desktop: 2.2 GB  [Reclaimable, High confidence]
+  evidence: 10 processes, including its Linux VM
+  state: 0 containers running
+  to release: Quit Docker Desktop; it restarts in seconds when you need it.
+```
+
+It leads with swap and the compressor rather than a "memory used" total, because macOS fills unused RAM by design — a high used figure is normal and tells you almost nothing. A virtual machine is the usual reason a Mac looks inexplicably full: it holds its configured memory whether or not the guest is doing anything, and its process is named after the virtualization framework rather than the app that started it. Maclovin names such a VM from the disk image it holds open and reports it under the app that owns it.
+
+Memory is only ever called reclaimable when the runtime's own CLI says it has no workload. A long uptime is never treated as idleness, and a probe that fails is reported as unknown rather than as free memory.
 
 ### Find and apply safe cleanup
 
@@ -111,6 +138,14 @@ enabled = true
 
 ## How Maclovin measures
 
+### Memory
+
+Per-process figures are `phys_footprint` (`proc_pid_rusage`) — the same basis Activity Monitor reports, and the only one worth ranking by. Resident size excludes pages held in the compressor, so it understates worst for exactly the idle processes most worth finding: an idle VM here reported 787 MB resident against a real 5.17 GB.
+
+Processes owned by another user cannot be read that way and fall back to resident size, which is a floor rather than a measurement; those rows say so, and one such process makes its whole group a lower bound. Processes that cannot be read at all are counted and disclosed. System-wide figures come from `host_statistics64` and `vm.swapusage`; "in use" is physical minus free and speculative pages, which is Maclovin's own accounting rather than Activity Monitor's category math.
+
+### Storage
+
 Sizes are **on-disk allocated bytes** (what `du` reports, and what deletion actually reclaims) — not logical file length. Hardlinks are counted once, symlinks are never followed, and unreadable paths are tallied and disclosed rather than silently skipped. APFS clones may over-count and snapshots/purgeable space are not counted; Maclovin states this rather than pretending to match the macOS Storage Settings math.
 
 ## Command status
@@ -119,6 +154,7 @@ Sizes are **on-disk allocated bytes** (what `du` reports, and what deletion actu
 |---|---|
 | `cleanup scan` / `review` / `apply` | ✅ working |
 | `apps audit` | ✅ working |
+| `memory audit` | ✅ working |
 | `history` / `history show` | ✅ working |
 | `scan` (broad dashboard) | 🚧 planned |
 | `brew audit` | 🚧 planned |

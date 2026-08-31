@@ -42,6 +42,7 @@ maclovin brew uninstall <formula-or-cask> --apply
 maclovin cleanup scan
 maclovin cleanup review
 maclovin cleanup apply
+maclovin memory audit
 maclovin doctor
 maclovin history
 ```
@@ -91,6 +92,21 @@ Decided default (see issue #2):
   - A partial failure stops the batch: candidates that already succeeded keep their measured freed bytes, the failing candidate is recorded as failed with a reason, and the remainder are recorded as skipped. The total freed-so-far is always reported.
   - The reconciliation surfaces both after `cleanup apply` and in `history`; history stores the same per-candidate estimated-vs-freed record (`estimated bytes before` / `measured bytes after`).
   - Modeled in `MaclovinCore/CleanupReconciliation.swift` so `cleanup apply` and `history show` render it from one shared contract.
+
+## Memory Audit
+
+- V1 includes a read-only `maclovin memory audit`. Maclovin explains a contended resource; memory is the second one after storage.
+- There is no `memory apply` or `memory reclaim` in V1. Releasing memory means stopping a process, and stopping a running process is a different class of action from deleting a regenerable cache — it can lose unsaved work with no Trash to recover it from. Maclovin names the command that would release the memory and leaves running it to the user.
+- The report leads with swap and compressor signals, not "memory used". macOS fills unused RAM by design, so a high used figure is normal and nearly information-free; the compressor's working ratio and swap traffic are what actually cost the user time.
+- Signals are reported individually rather than collapsed into one score, since they fail in different ways and call for different fixes. The overall level is the worst signal.
+- Low free memory is capped at elevated and can never be critical on its own, because macOS deliberately keeps free memory low. It is only meaningful next to swap and compressor pressure.
+- Per-process memory is `phys_footprint` (`proc_pid_rusage`), the basis Activity Monitor uses. Resident size is not comparable and is used only as a labelled fallback: it excludes compressed pages, so it understates worst for exactly the idle processes most worth finding.
+- Processes owned by another user cannot be read; those rows fall back to resident size and say so, and one such member makes its whole group a lower bound. Unreadable processes are tallied and disclosed rather than dropped.
+- Consumers group only by owning `.app` bundle — direct path evidence. Never by executable name: Apple Virtualization VM hosts all share one executable while being unrelated machines.
+- Apple Virtualization VMs are attributed by the disk image they hold open, since they are XPC services reparented to `launchd` and their executable path names the framework rather than the owner. System paths never identify an owner. A VM traced to an app is reported under that app so its memory is not double-counted.
+- A container folder's bundle identifier and an `.app` name must normalize to one name (`com.docker.docker` and `Docker`), or a runtime's own processes and its VM appear as two unrelated consumers.
+- Workload state comes from the runtime's own CLI, never from inference. Uptime is never treated as idleness. A failed probe is reported as unknown, never as reclaimable — an unreachable daemon and an idle one must not look alike.
+- Implemented in `MaclovinCore/MemorySample.swift` (model), `MemorySampler.swift` (kernel reads), `MemoryAuditor.swift` (signals and grouping), and `MemoryRuntimes.swift` (virtualization attribution).
 
 ## Uninstall
 
