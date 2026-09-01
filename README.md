@@ -12,17 +12,25 @@ Cleanup Scan
 
 Summary
 -------
-Candidates: 4
-Estimated reclaimable: up to 6.3 GB
-Audit-only findings: 1
-Writes: none
+  Candidates             4
+  Estimated reclaimable  up to 6.3 GB
+  Audit-only findings    1
+  Writes                 none
 
 Candidates (largest first)
 --------------------------
-npm cache: est 5.8 GB  [Low risk, High confidence]  via `npm cache clean --force`
-Homebrew cleanup: est 300 MB  [Low risk, High confidence]  via `brew cleanup`
-pip cache: est 185 MB  [Low risk, High confidence]  via `pip3 cache purge`
-User logs: est 6.8 MB  [Low risk, High confidence]  deletes ~/Library/Logs
+  npm cache         est 5.8 GB  [Low risk, high confidence]
+                    id: npm-cache  ·  runs `npm cache clean --force`
+                    Downloaded package tarballs and metadata; npm re-fetches on
+                    demand. Estimate: on-disk size of the npm cache store.
+  Homebrew cleanup  est 300 MB  [Low risk, high confidence]
+                    id: brew-cleanup  ·  runs `brew cleanup`
+                    Outdated downloads and stale versions Homebrew itself says it
+                    would remove. Estimate: parsed from `brew cleanup --dry-run`.
+  User logs         est 6.8 MB  [Low risk, high confidence]
+                    id: user-logs  ·  deletes ~/Library/Logs
+                    Generated application and diagnostic logs under ~/Library/Logs.
+                    Estimate: on-disk size measured by walking the target tree.
 ```
 
 ## Principles
@@ -57,19 +65,38 @@ maclovin memory audit
 Read-only, always. Releasing memory means stopping a process, so Maclovin names the command that would do it and leaves running it to you.
 
 ```
+Critical pressure — the workload does not fit in RAM (Swap, Compressor). Up to
+2.2 GB can be freed by quitting runtimes that report no workload; see
+Virtualization Runtimes below.
+
 Pressure Signals
 ----------------
-Swap: 4.7 GB of 6.0 GB (79%)  [Critical]
-Compressor: 21 GB held in 6.7 GB (3.2x)  [Elevated]
-Headroom: 149 MB free of 16 GB (1%)  [Elevated]
+  Swap        [Critical]  4.7 GB of 6.0 GB (79%)
+              The swap file is nearly full. macOS grows it on demand, but pages
+              are moving to disk continuously and every miss costs real time.
+  Compressor  [Elevated]  21 GB held in 6.7 GB (3.2x)
+              The compressor is doing steady work to keep the workload resident.
+  Headroom    [Elevated]  149 MB free of 16 GB (1%)
+              Almost no memory is immediately available, so a new allocation
+              must first reclaim from something else.
 
 Virtualization Runtimes
 -----------------------
-Docker Desktop: 2.2 GB  [Reclaimable, High confidence]
-  evidence: 10 processes, including its Linux VM
-  state: 0 containers running
-  to release: Quit Docker Desktop; it restarts in seconds when you need it.
+  Docker Desktop  2.2 GB — Reclaimable (high confidence)
+    evidence      10 processes, including its Linux VM
+    state         0 containers running
+    to release    Quit Docker Desktop; it restarts in seconds when you need it.
+
+Largest Consumers
+-----------------
+  Visual Studio Code (26)  3.5 GB   22%  ############
+  Docker (9)               2.2 GB   14%  ########
+  Google Chrome (19)       2.2 GB   14%  #######
 ```
+
+Every report is wrapped to the terminal width, labels share a column, and levels
+are colour-coded when stdout is a terminal. Piped or redirected output, and
+`NO_COLOR`, get the same text without escape sequences.
 
 It leads with swap and the compressor rather than a "memory used" total, because macOS fills unused RAM by design — a high used figure is normal and tells you almost nothing. A virtual machine is the usual reason a Mac looks inexplicably full: it holds its configured memory whether or not the guest is doing anything, and its process is named after the virtualization framework rather than the app that started it. Maclovin names such a VM from the disk image it holds open and reports it under the app that owns it.
 
@@ -88,13 +115,14 @@ maclovin cleanup apply npm-cache pip-cache   # apply explicit candidates by ID
 ```
 Per-Candidate Estimate vs Actual
 --------------------------------
-npm cache: est 5.8 GB -> freed 5.8 GB (succeeded, on estimate)
+  npm cache  est 5.8 GB  ->  freed 5.8 GB
+             succeeded, on estimate
 
 Totals
 ------
-Estimated total: 5.8 GB
-Freed total: 5.8 GB
-Result: complete
+  Estimated total  5.8 GB
+  Freed total      5.8 GB
+  Result           complete
 ```
 
 A failure stops the batch: succeeded candidates keep their measured freed bytes, the rest are recorded as skipped, and the partial result is reported plainly.
@@ -108,6 +136,15 @@ maclovin apps audit
 ```
 
 Measures every app bundle in `/Applications` and `~/Applications`, attributes related data in Application Support, Caches, Containers, and Group Containers to its app with an explicit confidence label (High/Medium/Low), and lists what could not be attributed — so a 44 GB Docker or 12 GB Electron-app footprint is visible instead of a mystery.
+
+```
+Largest Apps
+------------
+  Docker               42 GB   44%  bundle 1.9 GB + data 40 GB · low-confidence match
+  Claude               11 GB   12%  bundle 823 MB + data 10 GB · medium-confidence match
+  iMovie              3.7 GB    4%  bundle 3.7 GB + data 4.0 KB · high-confidence match
+  Serato DJ Lite      2.3 GB    2%  bundle only; no data matched
+```
 
 ### Review what happened
 

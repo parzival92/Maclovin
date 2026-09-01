@@ -55,12 +55,7 @@ struct CleanupReviewCommand: ParsableCommand {
         let sections = groups.map { group in
             ReportSection(
                 title: "\(group.source) — up to \(group.totalEstimatedSize.formatted)",
-                rows: group.items.flatMap { item in
-                    [
-                        CleanupApplyFlow.batchRow(item.candidate).numbered(item.number),
-                        ReportRow("      why", item.candidate.explanation)
-                    ]
-                }
+                rows: CandidateRow.rows(group.items.map { ($0.number, $0.candidate) }, rationale: .why)
             )
         }
 
@@ -68,14 +63,8 @@ struct CleanupReviewCommand: ParsableCommand {
             ReportPrinter.render(
                 title: "Cleanup Review",
                 sections: sections,
-                footer: ["Total: up to \(total.formatted) across \(groups.reduce(0) { $0 + $1.items.count }) candidates. Nothing has been changed yet."]
+                footer: ["Total: up to \(total.formatted) across \(Plural.count(groups.reduce(0) { $0 + $1.items.count }, "candidate")). Nothing has been changed yet."]
             )
         )
-    }
-}
-
-private extension ReportRow {
-    func numbered(_ number: Int) -> ReportRow {
-        ReportRow("[\(number)] \(label)", value)
     }
 }

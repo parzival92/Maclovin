@@ -43,8 +43,9 @@ struct HistoryCommand: ParsableCommand {
 
         let rows = entries.map { id, entry in
             ReportRow(
-                "\(formatter.string(from: entry.timestamp))  \(entry.kind.label)",
-                "\(entry.headline)  [\(id)]"
+                id,
+                "\(entry.kind.label)  ·  \(formatter.string(from: entry.timestamp))",
+                note: entry.headline
             )
         }
 
@@ -105,7 +106,7 @@ struct HistoryShowCommand: ParsableCommand {
             ),
             ReportSection(
                 title: "Summary",
-                rows: entry.summary.map { ReportRow("•", $0) }
+                rows: entry.summary.map { ReportRow($0, "") }
             )
         ]
 
@@ -118,7 +119,7 @@ struct HistoryShowCommand: ParsableCommand {
 
         if !entry.errors.isEmpty {
             sections.append(
-                ReportSection(title: "Errors / Skipped", rows: entry.errors.map { ReportRow("!", $0) })
+                ReportSection(title: "Errors / Skipped", rows: entry.errors.map { ReportRow("! \($0)", "") })
             )
         }
 
