@@ -3,7 +3,7 @@ import ArgumentParser
 struct Maclovin: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "maclovin",
-        abstract: "Understand and reduce disk usage on your Mac safely.",
+        abstract: "Understand and reduce disk and memory usage on your Mac safely.",
         discussion: """
         Maclovin is local-first. Scaffolded commands are read-only unless a future apply or uninstall flow explicitly asks for confirmation.
         """,
@@ -13,6 +13,7 @@ struct Maclovin: ParsableCommand {
             AppsCommand.self,
             BrewCommand.self,
             CleanupCommand.self,
+            MemoryCommand.self,
             DoctorCommand.self,
             HistoryCommand.self
         ]

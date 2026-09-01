@@ -41,6 +41,11 @@ Sources/
       DockerScanner.swift
       XcodeScanner.swift
       VersionManagerScanner.swift
+    Memory/
+      MemorySample.swift
+      MemorySampler.swift
+      MemoryAuditor.swift
+      MemoryRuntimes.swift
     Cleanup/
       CleanupCandidate.swift
       CleanupPlanner.swift
@@ -230,6 +235,26 @@ Validation:
 - Scan writes a summary when history is enabled.
 - Cleanup writes before/after action records.
 - Excluded paths from config are respected.
+
+## Milestone 9: Memory Audit
+
+Implement `maclovin memory audit` (read-only; no apply counterpart).
+
+Capabilities:
+
+- Read system memory via `host_statistics64(HOST_VM_INFO64)` and `sysctlbyname("vm.swapusage")`.
+- Rank processes by `phys_footprint` (`proc_pid_rusage`), falling back to `ps` resident size for processes owned by another user and labelling those rows as understated.
+- Report swap, compressor, and headroom as separate threshold signals, each with its measurement beside its verdict.
+- Group consumers by owning `.app` bundle only.
+- Attribute Apple Virtualization VMs to an owning app via the disk image they hold open.
+- Report a runtime as reclaimable only when its own CLI reports no workload (`docker ps`, `multipass list`).
+
+Validation:
+
+- The command performs no writes and never signals a process.
+- A runtime whose probe fails is reported as unknown, not reclaimable.
+- Processes sharing an executable are not merged.
+- Permission gaps are disclosed rather than silently dropped.
 
 ## Release Readiness
 
