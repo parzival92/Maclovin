@@ -130,6 +130,16 @@ public struct CandidateReconciliation: Equatable, Sendable {
 
     /// A single line summarizing the reconciliation, for `cleanup apply` output
     /// and history entries — for example `est 1.2 GB -> freed 1.1 GB (succeeded, -100 MB)`.
+    /// The verdict on its own, without the figures: what happened, and how
+    /// close the estimate was.
+    public var statusDetail: String {
+        var detail = status.rawValue
+        if status == .succeeded {
+            detail += ", \(Self.formatVariance(varianceBytes))"
+        }
+        return detail
+    }
+
     public var summaryLine: String {
         let estimated = estimate.estimatedSize.formatted
         let freed = outcome.freedSize.formatted
@@ -213,7 +223,18 @@ public struct CleanupReconciliationReport: Equatable, Sendable {
     /// Renders the reconciliation as report sections shared by `cleanup apply`
     /// output and `history show`: one row per candidate plus a totals summary.
     public func reportSections() -> [ReportSection] {
-        let candidateRows = candidates.map { ReportRow($0.title, $0.summaryLine) }
+        // Estimate and freed figures are padded to a common width so the two
+        // columns can be compared down the list, not just within a row.
+        let estimateWidth = candidates.map { $0.estimate.estimatedSize.formatted.count }.max() ?? 0
+        let freedWidth = candidates.map { $0.outcome.freedSize.formatted.count }.max() ?? 0
+        let candidateRows = candidates.map { candidate in
+            ReportRow(
+                candidate.title,
+                "est \(TerminalStyle.padLeading(candidate.estimate.estimatedSize.formatted, to: estimateWidth))"
+                    + "  ->  freed \(TerminalStyle.padLeading(candidate.outcome.freedSize.formatted, to: freedWidth))",
+                note: candidate.statusDetail
+            )
+        }
 
         var summaryRows = [
             ReportRow("Estimated total", totalEstimatedSize.formatted),

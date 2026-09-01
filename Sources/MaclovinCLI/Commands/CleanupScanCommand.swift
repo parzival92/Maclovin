@@ -26,19 +26,7 @@ struct CleanupScanCommand: ParsableCommand {
             sections.append(
                 ReportSection(
                     title: "Candidates (largest first)",
-                    rows: result.candidates.flatMap { candidate in
-                        [
-                            ReportRow(
-                                candidate.title,
-                                "est \(candidate.estimatedSize.formatted)"
-                                    + "  [\(candidate.risk.label) risk, \(candidate.confidence.label) confidence]"
-                                    + (candidate.mode == .officialCommand
-                                        ? "  via `\(candidate.action.displayed)`"
-                                        : "  deletes \(candidate.action.displayed)")
-                            ),
-                            ReportRow("  \(candidate.id)", "\(candidate.explanation) Estimate: \(candidate.estimateBasis).")
-                        ]
-                    }
+                    rows: CandidateRow.rows(result.candidates.map { (nil, $0) }, rationale: .full)
                 )
             )
         }
@@ -48,7 +36,7 @@ struct CleanupScanCommand: ParsableCommand {
                 ReportSection(
                     title: "Audit-Only (never offered for cleanup)",
                     rows: result.auditOnly.map { finding in
-                        ReportRow(finding.title, "\(finding.size.formatted)  \(finding.path)  — \(finding.note)")
+                        ReportRow(finding.title, finding.size.formatted, note: "\(finding.path)\n\(finding.note)")
                     }
                 )
             )

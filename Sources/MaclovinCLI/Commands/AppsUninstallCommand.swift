@@ -63,7 +63,7 @@ struct AppsUninstallCommand: ParsableCommand {
                 .map { "  - \($0.name)  (\($0.path))  [\($0.bundleID ?? "no bundle id")]" }
                 .joined(separator: "\n")
             throw ValidationError(
-                "'\(query)' is ambiguous; it matches \(candidates.count) apps:\n\(list)\n"
+                "'\(query)' is ambiguous; it matches \(Plural.count(candidates.count, "app")):\n\(list)\n"
                     + "Re-run with the bundle identifier to pick exactly one."
             )
         }

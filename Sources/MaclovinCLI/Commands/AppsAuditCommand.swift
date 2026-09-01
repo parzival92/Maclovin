@@ -30,31 +30,60 @@ struct AppsAuditCommand: ParsableCommand {
         if report.footprints.isEmpty {
             sections.append(ReportSection(title: "Largest Apps", rows: [ReportRow("(none found)", "")]))
         } else {
-            let rows = report.footprints.prefix(max(0, top)).map { footprint -> ReportRow in
-                let value: String
+            let listed = Array(report.footprints.prefix(max(0, top)))
+            let total = Double(report.totalBytes)
+            let sizeWidth = listed.map { $0.totalSize.formatted.count }.max() ?? 0
+
+            // One line per app: with fifteen rows by default, the breakdown
+            // earns its place on the row rather than on a line of its own.
+            let rows = listed.map { footprint -> ReportRow in
+                let share = total > 0 ? Double(footprint.totalBytes) / total : 0
+                let breakdown: String
                 if footprint.dataBytes > 0 {
-                    let confidence = footprint.dataConfidence.map { " [\($0.label)]" } ?? ""
-                    value = "\(footprint.totalSize.formatted)  (bundle \(footprint.bundleSize.formatted) + data \(footprint.dataSize.formatted)\(confidence))"
+                    let confidence = footprint.dataConfidence
+                        .map { " · \($0.label.lowercased())-confidence match" } ?? ""
+                    breakdown = "bundle \(footprint.bundleSize.formatted) + data \(footprint.dataSize.formatted)\(confidence)"
                 } else {
-                    value = "\(footprint.totalSize.formatted)  (bundle only)"
+                    breakdown = "bundle only; no data matched"
                 }
+                let value = [
+                    TerminalStyle.padLeading(footprint.totalSize.formatted, to: sizeWidth),
+                    TerminalStyle.padLeading(String(format: "%.0f%%", share * 100), to: 4),
+                    breakdown
+                ].joined(separator: "  ")
                 return ReportRow(footprint.name, value)
             }
             sections.append(ReportSection(title: "Largest Apps", rows: rows))
         }
 
         if !report.unattributed.isEmpty {
-            var rows = report.unattributed.map { bucket in
-                ReportRow(bucket.source.rawValue, bucket.size.formatted)
-            }
+            sections.append(
+                ReportSection(
+                    title: "Unattributed Data (by location)",
+                    rows: report.unattributed.map { ReportRow($0.source.rawValue, $0.size.formatted) }
+                )
+            )
+
             let largestItems = report.unattributed
                 .flatMap(\.largest)
                 .sorted { $0.size > $1.size }
                 .prefix(5)
-            for item in largestItems {
-                rows.append(ReportRow("• \(item.folderName)", "\(item.size.formatted) (\(item.source.rawValue))"))
+            if !largestItems.isEmpty {
+                sections.append(
+                    ReportSection(
+                        title: "Largest Unattributed Folders",
+                        rows: {
+                            let width = largestItems.map { $0.size.formatted.count }.max() ?? 0
+                            return largestItems.map {
+                                ReportRow(
+                                    $0.folderName,
+                                    "\(TerminalStyle.padLeading($0.size.formatted, to: width))  in \($0.source.rawValue)"
+                                )
+                            }
+                        }()
+                    )
+                )
             }
-            sections.append(ReportSection(title: "Unattributed Data", rows: rows))
         }
 
         if !report.skippedDirectories.isEmpty {
@@ -69,7 +98,8 @@ struct AppsAuditCommand: ParsableCommand {
         let footer = [
             "Sizes are on-disk allocated bytes. Hardlinks counted once; symlinks not followed.",
             "Data is matched to apps by bundle ID (high) or name (medium); unmatched data is listed separately.",
-            "These numbers are Maclovin's own measurement and do not reproduce macOS Storage Settings."
+            "These numbers are Maclovin's own measurement and do not reproduce macOS Storage Settings.",
+            "Percentages are each app's share of the total above."
         ]
 
         print(ReportPrinter.render(title: "Applications Audit", sections: sections, footer: footer))
